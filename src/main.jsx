@@ -12,7 +12,7 @@ import Login from "./Pages/Login/Login.jsx";
 import Signup from "./Pages/Signup/Signup.jsx";
 import Dashboard from "./Pages/Dashboard/index.jsx";
 import ProtectedPage from "./Pages/ProtectedPage/index.jsx";
-import AuthcontextProvider from "./context/AuthContextProvider.jsx";
+import AuthcontextProvider from "./context/AuthcontextProvider.jsx";
 import PublicPage from "./Pages/PublicPage/index.jsx";
 
 const isLoggedIn = false;

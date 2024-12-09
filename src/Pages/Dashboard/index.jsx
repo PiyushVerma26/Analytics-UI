@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import AuthContext from "../../context/auth.context.js";
 
 function Dashboard() {
+  const [name, setName] = useState(null);
   const [barData, setBarData] = useState(null);
   const [data, setData] = useState([]);
   const [lineChartData, setLineChartData] = useState([]);
@@ -57,8 +58,8 @@ function Dashboard() {
 
       const { data, status } = await api.get(`/getData?${queryString}`);
       if (status !== 200) throw new Error("Something went Wrong");
-
-      setData(data.data);
+      setName(data?.userData?.name);
+      setData(data?.data);
       setLineChartData(data.data);
     } catch (err) {
       console.log(err.response?.data.message);
@@ -102,7 +103,7 @@ function Dashboard() {
         tempArray.push({ feature, timeSpent: featureSums[feature] });
       }
       let max = {
-        feature: "A",
+        feature: "",
         timeSpent: 0,
       };
 
@@ -135,7 +136,7 @@ function Dashboard() {
           <h1 className="text-2xl text-gray-700">Dashboard</h1>
           <div className="text-xl flex items-center">
             <span className="font-light text-black flex items-center gap-2">
-              Piyush Verma <Logout onClick={handleLogoutClick} />
+              {name} <Logout onClick={handleLogoutClick} />
             </span>
           </div>
         </div>

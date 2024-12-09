@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AuthContext from "./auth.context";
+import AuthContext from "./auth.context.js";
 
 import api from "../utils/api.js";
 
@@ -40,7 +40,6 @@ function AuthcontextProvider({ children }) {
     if (storedLogin !== null && storedLogin !== isLogin.toString()) {
       setIsLogin(storedLogin);
     }
-    console.log(isLogin, "From Effect");
   }, [isLogin]);
 
   return (

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://data-analytics-backend.vercel.app/api",
+  baseURL: "http://13.200.225.156:4000/api",
   headers: {
     "Content-Type": "application/json",
   },

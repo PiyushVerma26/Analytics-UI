@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import BarChartComponent from "../../components/Charts/BarChartComponent";
 import LineChartComponent from "../../components/Charts/LineChartComponent";
 import Card from "./components/card";
@@ -6,7 +7,6 @@ import { IoMdLogOut as Logout } from "react-icons/io";
 import api from "../../utils/api.js";
 import DropDown from "./components/Dropdown/index.jsx";
 import DateRangePickerComponents from "./components/DateRange/index.jsx";
-import { useNavigate } from "react-router-dom";
 import AuthContext from "../../context/auth.context.js";
 
 function Dashboard() {
@@ -23,10 +23,13 @@ function Dashboard() {
     endDate: "",
     gender: "",
   });
+  const [loading, setLoading] = useState(true); // Loading state for preventing flickering
 
   const { handleLogout } = useContext(AuthContext);
-
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Logout functionality
   const handleLogoutClick = async () => {
     try {
       const isLogin = await handleLogout();
@@ -38,37 +41,40 @@ function Dashboard() {
     }
   };
 
+  // Update filter values
   const handleFilterChange = (name, value) => {
-    setQueryData({
-      ...queryData,
+    if (name === "ageGroup" && value === ">25") {
+      value = "25";
+    }
+    setQueryData((prev) => ({
+      ...prev,
       [name]: value,
+    }));
+  };
+
+  // Update date range
+  const handleDateSelect = (startDate, endDate) => {
+    setQueryData((prev) => ({ ...prev, startDate, endDate }));
+  };
+
+  // Clear all filters
+  const handleFilterRemove = () => {
+    setQueryData({
+      ageGroup: "",
+      startDate: "",
+      endDate: "",
+      gender: "",
     });
   };
 
+  // Handle bar chart click
   const handleBarClick = (feature) => {
     setFeatureData(feature);
   };
 
-  const handleDateSelect = (startDate, endDate) => {
-    setQueryData({ ...queryData, startDate: startDate, endDate: endDate });
-  };
-  async function getData() {
-    try {
-      const queryString = buildQueryString(queryData);
-
-      const { data, status } = await api.get(`/getData?${queryString}`);
-      if (status !== 200) throw new Error("Something went Wrong");
-      setName(data?.userData?.name);
-      setData(data?.data);
-      setLineChartData(data.data);
-    } catch (err) {
-      console.log(err.response?.data.message);
-    }
-  }
-
+  // Build query string from queryData
   const buildQueryString = (queryData) => {
     const queryParams = [];
-
     for (let key in queryData) {
       if (queryData[key]) {
         queryParams.push(
@@ -76,17 +82,53 @@ function Dashboard() {
         );
       }
     }
-
     return queryParams.join("&");
   };
 
+  const getData = async () => {
+    try {
+      setLoading(true);
+      const queryString = buildQueryString(queryData);
+      const { data, status } = await api.get(`/getData?${queryString}`);
+      if (status !== 200) throw new Error("Something went wrong");
+      setName(data?.userData?.name);
+      setData(data?.data);
+      setLineChartData(data.data);
+    } catch (err) {
+      console.error("Something went wrong:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync queryData to URL
+  useEffect(() => {
+    const queryString = buildQueryString(queryData);
+    navigate(`?${queryString}`, { replace: true });
+  }, [queryData, navigate]);
+
+  // Initialize filters from URL on page load
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const initialQueryData = {
+      ageGroup: searchParams.get("ageGroup") || "",
+      startDate: searchParams.get("startDate") || "",
+      endDate: searchParams.get("endDate") || "",
+      gender: searchParams.get("gender") || "",
+    };
+    console.log("first,initialQueryData");
+    setQueryData(initialQueryData);
+  }, [location.search]);
+
+  // Fetch data whenever queryData changes
   useEffect(() => {
     getData();
   }, [queryData]);
 
+  // Process data for bar chart and feature summary
   useEffect(() => {
     const tempArray = [];
-    if (data) {
+    if (data && data.length > 0) {
       const featureSums = {};
 
       data.forEach((item) => {
@@ -120,6 +162,7 @@ function Dashboard() {
     }
   }, [data]);
 
+  // Update line chart data when feature changes
   useEffect(() => {
     if (data) {
       const lineData = data.filter((item) => {
@@ -128,6 +171,26 @@ function Dashboard() {
       setLineChartData(lineData);
     }
   }, [feature]);
+
+  // Generic URL share button function
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "Check out the Dashboard",
+          url: window.location.href,
+        })
+        .catch((error) => console.log("Error sharing:", error));
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      navigator.clipboard
+        .writeText(window.location.href)
+        .then(() => {
+          alert("URL copied to clipboard!");
+        })
+        .catch((err) => console.error("Error copying URL: ", err));
+    }
+  };
 
   return (
     <div className="w-full p-4 min-h-screen h-full bg-slate-200 ">
@@ -154,19 +217,43 @@ function Dashboard() {
             handleChange={handleFilterChange}
           />
           <DropDown
-            optionList={["25", "15-25"]}
+            optionList={[">25", "15-25"]}
             name={"ageGroup"}
             handleChange={handleFilterChange}
           />
           <DateRangePickerComponents handleDateSelect={handleDateSelect} />
+          <button
+            className="max-w-max px-3 bg-white rounded-lg relative py-2 capitalize"
+            onClick={handleFilterRemove}
+          >
+            Remove Filter
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="max-w-max px-3 bg-blue-500 text-white rounded-lg relative py-2 capitalize"
+          >
+            Share This URL
+          </button>
         </div>
 
         <h2 className="mt-12 text-3xl">Time Analysis of Features</h2>
 
-        <div className="w-full flex md:flex-row flex-col items-center mt-4 gap-5 ">
-          <BarChartComponent data={barData || []} onBarClick={handleBarClick} />
-          <LineChartComponent data={lineChartData} />
-        </div>
+        {loading ? (
+          <p>Loading...</p> // Show loading text while data is being fetched
+        ) : data.length ? (
+          <div className="w-full flex md:flex-row flex-col items-center mt-4 gap-5 ">
+            <BarChartComponent
+              data={barData || []}
+              onBarClick={handleBarClick}
+            />
+            <LineChartComponent data={lineChartData} />
+          </div>
+        ) : (
+          <p>No Data Found</p>
+        )}
+
+        {/* Share Button */}
       </div>
     </div>
   );
